@@ -1,40 +1,50 @@
 import os
 
-from datetime import timedelta
-
 import django
 
-from django.db.models import Count, F, Value
-from django.utils import timezone
-
 from devman.models import Student, Manager, Team
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
-def get_student_info(user_id):
-    result = {'id': user_id}
-    student = Student.objects.prefetch_related('teams').get(id=user_id)
+
+def get_student_info(student_id):
+    result = {'id': student_id}
+    student = Student.objects.prefetch_related('teams').get(id=student_id)
     result['firstname'] = student.firstname
     result['secondname'] = student.secondname
-    last_team = (
+    result['level'] = student.level
+    current_team = (
         student
         .teams
+        .filter(is_active=True)
         .select_related('manager')
         .prefetch_related('students')
-        .last()
+        .current()
     )
-    result['in_project'] = (
-        timezone.now().date() - last_team.date <= timedelta(days=7)
-    )
-    if result['in_project']:
-        result['team_id'] = last_team.id
-        result['current_team'] = last_team.title
-        result['call_time'] = last_team.call_time
+    if current_team:
+        result['in_project'] = True
+        result['team_id'] = current_team.id
+        result['current_team'] = current_team.title
+        result['call_time'] = current_team.call_time
         result['students'] = [
-            f'{x.__str__()} {x.id}' for x in last_team.students.all()
+            f'{x.__str__()} {x.id}' for x in current_team.students.all()
         ]
-        result['PM'] = last_team.manager.__str__()
+        result['PM'] = current_team.manager.__str__()
+    return result
+
+
+def get_manager_info(manager_id):
+    result = {'id': manager_id}
+    manager = Manager.objects.prefetch_related('teams').get(id=manager_id)
+    result['teams'] = []
+    for team in manager.teams.filter(is_active=True):
+        result['teams'].append({
+            'call_time': team.call_time,
+            'team_id': team.id,
+            'team_title': team.title
+        })
     return result
 
 
@@ -51,3 +61,13 @@ def get_team_info(id):
     result['PM'] = team.manager.__str__()
     result['call_time'] = team.call_time
     return result
+
+
+def close_team(team_id, manager_id, final_status):
+    team = Team.objects.select_related('manager').get(id=team_id)
+    if manager_id != team.manager.id:
+        return None
+    team.is_active = False
+    team.final_status = final_status
+    team.save()
+    return team.id

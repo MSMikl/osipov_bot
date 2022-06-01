@@ -22,6 +22,11 @@ class Manager(models.Model):
 
 
 class Student(models.Model):
+    LEVEL_CHOICES = [
+        ('Новичок', 'Новичок'),
+        ('Новичок +', 'Новичок +'),
+        ('Джун', 'Джун')
+    ]
     id = models.CharField(
         'Telegram id',
         max_length=50,
@@ -30,6 +35,12 @@ class Student(models.Model):
     )
     firstname = models.CharField('Имя', max_length=50, blank=True)
     secondname = models.CharField('Фамилия', max_length=50, blank=True)
+    level = models.CharField(
+        'Уровень подготовки',
+        max_length=10,
+        choices=LEVEL_CHOICES,
+        default='Новичок'
+    )
     banned_student = models.ManyToManyField(
         'self',
         verbose_name='Нежелательные члены команды',
@@ -81,6 +92,12 @@ class Team(models.Model):
         Manager,
         on_delete=models.SET_NULL,
         null=True, verbose_name='ПМ'
+    )
+    is_active = models.BooleanField('Проект активен', default=True)
+    final_status = models.CharField(
+        'Результат проекта',
+        max_length=100,
+        blank=True
     )
 
     def __str__(self):
