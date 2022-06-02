@@ -90,8 +90,10 @@ class Team(models.Model):
     )
     manager = models.ForeignKey(
         Manager,
+        related_name='ts',
         on_delete=models.SET_NULL,
-        null=True, verbose_name='ПМ'
+        null=True,
+        verbose_name='ПМ'
     )
     is_active = models.BooleanField('Проект активен', default=True)
     final_status = models.CharField(
@@ -99,6 +101,8 @@ class Team(models.Model):
         max_length=100,
         blank=True
     )
+    trello = models.URLField('Доска в Трелло', blank=True, null=True)
+    tg_chat = models.BigIntegerField('Чат в Телеграм', blank=True, null=True)
 
     def __str__(self):
         return f'Команда {self.id} {self.date}'
