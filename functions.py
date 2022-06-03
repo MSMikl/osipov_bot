@@ -1,5 +1,4 @@
 import os
-import tracemalloc
 
 import django
 
@@ -56,6 +55,7 @@ def get_manager_info(manager_id):
             'tg_chat': team.tg_chat
         })
     result['name'] = f'{manager.firstname} {manager.secondname}'
+    result['working_time'] = (manager.starttime, manager.finishtime)
     return result
 
 

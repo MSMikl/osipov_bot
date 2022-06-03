@@ -12,6 +12,7 @@ class Manager(models.Model):
     secondname = models.CharField('Фамилия', max_length=50, blank=True)
     starttime = models.TimeField('Начало рабочего интервала')
     finishtime = models.TimeField('Окончание рабочего интервала')
+    is_active = models.BooleanField('Работает', default=True)
 
     def __str__(self):
         return f'{self.firstname} {self.secondname}'
@@ -70,6 +71,7 @@ class Student(models.Model):
         verbose_name='С Дальнего Востока',
         default=False
     )
+    is_active = models.BooleanField('Доступен для проекта', default=True)
 
     def __str__(self):
         return f'{self.firstname} {self.secondname}'

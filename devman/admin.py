@@ -15,4 +15,4 @@ class ManagerAdmin(admin.ModelAdmin):
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     list_display = ['__str__', 'title', 'date', 'manager']
-    list_filter = ['date', 'manager']
+    list_filter = ['is_active', 'manager']
