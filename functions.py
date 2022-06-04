@@ -104,5 +104,12 @@ def close_team(team_id, manager_id, final_status=''):
     return team.id
 
 
+def finalize_teams(start_date):
+    teams = Team.objects.filter(is_active=True, date=start_date).prefetch_related('students')
+    teams.update(is_active=False)
+    teams.students.update(status=1)
+
+
 if __name__ == '__main__':
     print(get_manager_info('@Michalbl4')['teams'][0]['trello'])
+
