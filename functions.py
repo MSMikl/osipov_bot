@@ -1,5 +1,7 @@
 import os
 
+from datetime import datetime
+
 import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
@@ -34,7 +36,6 @@ def get_student_info(student_id):
         .first()
     )
     if current_team:
-        result['in_project'] = True
         result['team_id'] = current_team.id
         result['current_team'] = current_team.title
         result['call_time'] = current_team.call_time
@@ -43,6 +44,16 @@ def get_student_info(student_id):
         ]
         result['PM'] = current_team.manager.__str__()
     return result
+
+
+def set_student(data):
+    student = Student.objects.get(id=data['id'])
+    student.update(
+        project_date=data['week'],
+        available_time_start=datetime.strptime(data['start_time'], '%H:%M'),
+        available_time_finish=datetime.strptime(data['end_time'], '%H:%M'),
+        status=data['status']
+    )
 
 
 def get_manager_info(manager_id):
@@ -112,4 +123,3 @@ def finalize_teams(start_date):
 
 if __name__ == '__main__':
     print(get_manager_info('@Michalbl4')['teams'][0]['trello'])
-
