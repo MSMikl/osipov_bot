@@ -11,17 +11,27 @@ from devman.models import Student, Manager, Team
 
 def get_student_info(student_id):
     result = {'id': student_id}
-    student = Student.objects.prefetch_related('teams').get(id=student_id)
-    result['firstname'] = student.firstname
-    result['secondname'] = student.secondname
+    student = (
+        Student.objects
+        .filter(id=student_id, is_active=True)
+        .prefetch_related('teams')
+        .first()
+    )
+    if not student:
+        return
+    result['name'] = student.name
     result['level'] = student.level
+    result['status'] = student.status
+    result['start_time'] = student.available_time_start
+    result['finish_time'] = student.available_time_finish
+    result['project_date'] = student.project_date
     current_team = (
         student
         .teams
         .filter(is_active=True)
         .select_related('manager')
         .prefetch_related('students')
-        .current()
+        .first()
     )
     if current_team:
         result['in_project'] = True
@@ -29,7 +39,7 @@ def get_student_info(student_id):
         result['current_team'] = current_team.title
         result['call_time'] = current_team.call_time
         result['students'] = [
-            f'{x.__str__()} {x.id}' for x in current_team.students.all()
+            f'{x.name} {x.id}' for x in current_team.students.all()
         ]
         result['PM'] = current_team.manager.__str__()
     return result
@@ -52,11 +62,19 @@ def get_manager_info(manager_id):
             'team_id': team.id,
             'team_title': team.title,
             'trello': str(team.trello),
-            'tg_chat': team.tg_chat
+            'tg_chat': team.tg_chat,
+            'description': str(team.description),
+            'students': [f'{x.__str__()} {x.id}' for x in team.students.all()]
         })
-    result['name'] = f'{manager.firstname} {manager.secondname}'
+    result['name'] = manager.name
     result['working_time'] = (manager.starttime, manager.finishtime)
     return result
+
+
+def set_new_time(manager_id, starttime, finishtime):
+    manager = Manager.objects.get(id=manager_id)
+    manager.starttime, manager.finishtime = starttime, finishtime
+    manager.save()
 
 
 def get_team_info(id):
@@ -71,6 +89,8 @@ def get_team_info(id):
     result['students'] = [f'{x.__str__()} {x.id}' for x in team.students.all()]
     result['PM'] = team.manager.__str__()
     result['call_time'] = team.call_time
+    result['description'] = str(team.description)
+    result['trello'] = team.trello
     return result
 
 
@@ -82,6 +102,7 @@ def close_team(team_id, manager_id, final_status=''):
     team.final_status = final_status
     team.save()
     return team.id
+
 
 if __name__ == '__main__':
     print(get_manager_info('@Michalbl4')['teams'][0]['trello'])

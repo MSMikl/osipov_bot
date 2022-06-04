@@ -8,14 +8,13 @@ class Manager(models.Model):
         unique=True,
         primary_key=True
     )
-    firstname = models.CharField('Имя', max_length=50, blank=True)
-    secondname = models.CharField('Фамилия', max_length=50, blank=True)
+    name = models.CharField('Имя', max_length=70, blank=True)
     starttime = models.TimeField('Начало рабочего интервала')
     finishtime = models.TimeField('Окончание рабочего интервала')
     is_active = models.BooleanField('Работает', default=True)
 
     def __str__(self):
-        return f'{self.firstname} {self.secondname}'
+        return self.name
 
     class Meta:
         verbose_name = 'ПМ'
@@ -24,9 +23,16 @@ class Manager(models.Model):
 
 class Student(models.Model):
     LEVEL_CHOICES = [
-        ('Новичок', 'Новичок'),
-        ('Новичок +', 'Новичок +'),
-        ('Джун', 'Джун')
+        ('novice', 'Новичок'),
+        ('novice+', 'Новичок +'),
+        ('junior', 'Джун')
+    ]
+    STATUS_CHOICES = [
+        (1, 'Нет проекта'),
+        (2, 'В ожидании ответа'),
+        (3, 'Ждет команду'),
+        (4, 'В проекте'),
+        (0, 'Не сможет участвовать')
     ]
     id = models.CharField(
         'Telegram id',
@@ -34,20 +40,24 @@ class Student(models.Model):
         unique=True,
         primary_key=True
     )
-    firstname = models.CharField('Имя', max_length=50, blank=True)
-    secondname = models.CharField('Фамилия', max_length=50, blank=True)
+    name = models.CharField('Имя', max_length=70, blank=True)
     level = models.CharField(
         'Уровень подготовки',
         max_length=10,
         choices=LEVEL_CHOICES,
-        default='Новичок'
+        default='novice'
     )
-    banned_student = models.ManyToManyField(
+    status = models.IntegerField(
+        'Текущий статус',
+        choices=STATUS_CHOICES,
+        default=1
+    )
+    banned_students = models.ManyToManyField(
         'self',
         verbose_name='Нежелательные члены команды',
         blank=True
     )
-    desired_student = models.ManyToManyField(
+    desired_students = models.ManyToManyField(
         'self',
         verbose_name='Обязательные партнеры в команде',
         blank=True
@@ -67,6 +77,11 @@ class Student(models.Model):
     )
     available_time_start = models.TimeField(null=True)
     available_time_finish = models.TimeField(null=True)
+    project_date = models.DateField(
+        'Дата начала ближайшего проекта',
+        null=True,
+        blank=True
+    )
     far_east = models.BooleanField(
         verbose_name='С Дальнего Востока',
         default=False
@@ -74,7 +89,7 @@ class Student(models.Model):
     is_active = models.BooleanField('Доступен для проекта', default=True)
 
     def __str__(self):
-        return f'{self.firstname} {self.secondname}'
+        return self.name
 
     class Meta:
         verbose_name = 'Студент'
@@ -105,6 +120,7 @@ class Team(models.Model):
     )
     trello = models.URLField('Доска в Трелло', blank=True, null=True)
     tg_chat = models.BigIntegerField('Чат в Телеграм', blank=True, null=True)
+    description = models.URLField('Описание проекта', blank=True)
 
     def __str__(self):
         return f'Команда {self.id} {self.date}'
