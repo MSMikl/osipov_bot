@@ -75,8 +75,8 @@ class Student(models.Model):
         blank=True,
         on_delete=models.SET_NULL
     )
-    available_time_start = models.TimeField(null=True)
-    available_time_finish = models.TimeField(null=True)
+    available_time_start = models.TimeField(null=True, blank=True)
+    available_time_finish = models.TimeField(null=True, blank=True)
     project_date = models.DateField(
         'Дата начала ближайшего проекта',
         null=True,
