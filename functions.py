@@ -42,7 +42,7 @@ def get_student_info(student_id):
         result['students'] = [
             f'{x.name} {x.id}' for x in current_team.students.all()
         ]
-        result['PM'] = current_team.manager.__str__()
+        result['PM'] = f"{current_team.manager.name} {current_team.manager.id}"
     return result
 
 
