@@ -43,15 +43,17 @@ def get_student_info(student_id):
             f'{x.name} {x.id}' for x in current_team.students.all()
         ]
         result['PM'] = f"{current_team.manager.name} {current_team.manager.id}"
+        result['trello'] = str(current_team.trello)
+        result['description'] = str(current_team.description)
     return result
 
 
 def set_student(data):
-    student = Student.objects.get(id=data['id'])
+    student = Student.objects.filter(id=data['id'])
     student.update(
         project_date=data['week'],
-        available_time_start=datetime.strptime(data['start_time'], '%H:%M'),
-        available_time_finish=datetime.strptime(data['end_time'], '%H:%M'),
+        available_time_start=data['start_time'],
+        available_time_finish=data['end_time'],
         status=data['status']
     )
 

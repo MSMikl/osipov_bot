@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from datetime import datetime
+from datetime import date, datetime, time
 import logging
 import os
 
@@ -11,7 +11,7 @@ from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           DispatcherHandlerStop, Filters, MessageHandler,
                           Updater)
 
-from functions import get_student_info
+from functions import get_student_info, set_student
 
 # Enable logging
 logging.basicConfig(
@@ -124,14 +124,14 @@ def get_group_description(data: dict) -> str:
 
 def get_weeks() -> dict:
     return {
-        "с 01.06": "12345",
-        "с 08.06": "23456"
+        "с 01.06": date(2022, 6, 1),
+        "с 08.06": date(2022, 6, 8)
     }
 
 
 def get_time_ranges(week_id):
     return {
-        "c 10 до 12": "1232",
+        "c 10 до 12": (),
         "с 15 до 17": "454545",
         "с 18 до 20": "34343",
     }
@@ -297,7 +297,7 @@ def adjust_time(update: Update, context: CallbackContext) -> int:
 
 
 def finish_registration(update: Update, context: CallbackContext):
-    if not context.chat_data.get("cancel_project", False):
+    if not context.chat_data.get("cancel_project"):
         text = [
             "Ок, подытожим:",
             "ты хочешь принять участие в проекте",
@@ -307,6 +307,14 @@ def finish_registration(update: Update, context: CallbackContext):
         update.message.reply_text(
             "\n".join(text), reply_markup=ReplyKeyboardRemove())
     change_status(update, context)
+    data = {
+        'id': update.effective_user.name,
+        'week': get_weeks()[context.chat_data['select_week']],
+        'start_time': time(10),
+        'end_time': time(12),
+        'status': (0 if context.chat_data.get("cancel_project") else context.user_data['student']['status'])
+    }
+    set_student(data)
 
 
 def calback_30(context: CallbackContext):
