@@ -11,6 +11,8 @@ from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           DispatcherHandlerStop, Filters, MessageHandler,
                           Updater)
 
+from functions import get_student_info
+
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -69,12 +71,12 @@ text_status = {
 
 
 def change_status(update: Update, context: CallbackContext):
-    if context.user_data["project_status"] == ACTIVE_PROJECT:
-        context.user_data["project_status"] = NO_ACTIVE_PROJECT
+    if context.user_data['student']['status'] == ACTIVE_PROJECT:
+        context.user_data['student']['status'] = NO_ACTIVE_PROJECT
     else:
-        context.user_data["project_status"] += 1
+        context.user_data['student']['status'] += 1
     update.message.reply_text(
-        f"статус изменен на {text_status[context.user_data['project_status']]}")
+        f"статус изменен на {text_status[context.user_data['student']['status']]}")
 ########################
 
 
@@ -109,11 +111,13 @@ def get_active_project_status(context) -> int:
     return context.user_data.get("project_status", NO_ACTIVE_PROJECT)
 
 
-def get_group_description(student_id: str) -> str:
+def get_group_description(data: dict) -> str:
     desc = [
-        "Созвон вашей группы с 18:00 до 18:30",
-        "Проект менеджер: @gtimg",
-        "Вот описание проекта: https://docs.google.com/",
+        f"Созвон вашей группы в {data['call_time']}",
+        f"Проект менеджер: {data['PM']}",
+        f"Вот описание проекта: {data.get('description')}",
+        f"Доска в Trello: {data.get('trello')}",
+        f"Состав: {','.join(data['students'])}"        
     ]
     return "\n".join(desc)
 
@@ -168,23 +172,26 @@ def check_user(update: Update, context: CallbackContext) -> None:
 
 
 def check_project_status(update: Update, context: CallbackContext) -> None:
-    if context.user_data["project_status"] == NO_ACTIVE_PROJECT:
+    if context.user_data['student']['status'] == NO_ACTIVE_PROJECT:
         update.message.reply_text(
-            "Сейчас нет активного проекта. Как только он появится я тебе напишу")
+            "Сейчас нет активного проекта. Как только он появится, я тебе напишу")
         raise DispatcherHandlerStop()
-    if context.user_data["project_status"] == WAIT_REGISTRATION:
+    if context.user_data['student']['status'] == WAIT_REGISTRATION:
         update.message.reply_text(
             "Подожди пока формируем группы, как будет готово - напишу")
         raise DispatcherHandlerStop()
-    if context.user_data["project_status"] == ACTIVE_PROJECT:
-        group_description = get_group_description(
-            context.user_data["student_id"])
+    if context.user_data['student']['status'] == ACTIVE_PROJECT:
+        group_description = get_group_description(context.user_data['student'])
         update.message.reply_text(group_description)
         raise DispatcherHandlerStop
 
 
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(f'Привет {context.user_data["student_name"]}.')
+    context.user_data['student'] = get_student_info(update.effective_user.name)
+    if not context.user_data['student']:
+        update.message.reply_text('Это чат только для студентов курсов Devman')
+        return
+    update.message.reply_text(f"Привет {context.user_data['student']['name']}.")
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -314,7 +321,7 @@ def main() -> None:
     updater = Updater(tg_token)
     dispatcher = updater.dispatcher
 
-    dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
+    # dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
     dispatcher.add_handler(CommandHandler("start", start), 1)
     dispatcher.add_handler(MessageHandler(
         Filters.command, check_project_status), 2)
