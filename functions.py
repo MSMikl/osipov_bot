@@ -1,8 +1,8 @@
 import os
 
-from datetime import datetime
-
 import django
+
+from django.db import models
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
@@ -11,18 +11,8 @@ django.setup()
 from devman.models import Student, Manager, Team, Start
 
 
-def get_student_info(student_id, chat_id):
-    result = {'id': student_id}
-    student = (
-        Student.objects
-        .filter(id=student_id, is_active=True)
-        .prefetch_related('teams')
-        .first()
-    )
-    if not student:
-        return
-    student.chat_id = chat_id
-    student.save()
+def get_student_full_data(student):
+    result = {'id': student.id}
     result['name'] = student.name
     result['level'] = student.level
     result['status'] = student.status
@@ -48,6 +38,21 @@ def get_student_info(student_id, chat_id):
         result['trello'] = str(current_team.trello)
         result['description'] = str(current_team.description)
     return result
+
+
+def get_student_info(student_id, chat_id):
+    student = (
+        Student.objects
+        .filter(id=student_id, is_active=True)
+        .prefetch_related('teams')
+        .first()
+    )
+    if not student:
+        return
+    student.chat_id = chat_id
+    student.save()
+    return get_student_full_data(student)
+    
 
 
 def set_student(data):
@@ -118,20 +123,39 @@ def finalize_teams(start_date):
 def check_for_new_date():
     active_date = Start.objects.filter(send_request=True).last()
     if not active_date:
-        return True
+        return
     active_date.send_request = False
-    students = Student.objects.filter(is_active = True, active_team__isnull=True)
-    result = 
-    return (active_date.primary_date, active_date.secondary_date)
+    active_date.save()
+    students = (
+        Student.objects
+        .filter(is_active=True)
+        .prefetch_related('teams')
+        .annotate(
+            active_teams_count=models.Count('teams', filter=models.Q(teams__is_active=True))
+        )
+    )
+    result = list(students.filter(active_teams_count=0).values_list('chat_id', flat=True))
+    return (active_date.primary_date, active_date.secondary_date, result)
 
 
 def check_for_new_teams():
-    active_date = Start.objects.filter(send_request=True).last()
+    active_date = Start.objects.filter(send_teams=True).last()
     if not active_date:
-        return True
-    active_date.send_request = False
-    return (active_date.primary_date, active_date.secondary_date)
+        return
+    active_date.send_teams = False
+    active_date.save()
+    students = (
+        Student.objects
+        .filter(is_active=True)
+        .prefetch_related('teams')
+        .annotate(
+            active_teams_count=models.Count('teams', filter=models.Q(teams__is_active=True))
+        )
+    )
+    result = [get_student_full_data(student) for student in students]
+    return result
 
 
 if __name__ == '__main__':
-    print(get_manager_info('@Michalbl4')['teams'][0]['trello'])
+    print(check_for_new_date())
+    print(check_for_new_teams())
