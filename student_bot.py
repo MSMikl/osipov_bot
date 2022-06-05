@@ -105,7 +105,7 @@ def get_adjust_time_ranges(range_id):
 
 
 def check_user(update: Update, context: CallbackContext) -> None:
-    base_response = get_student_info(update.effective_user.name)
+    base_response = get_student_info(update.effective_user.name, update.effective_chat.id)
     if not base_response:
         update.message.reply_markdown(
             "Этот чат только для студентов курсов [Devman](https://dvmn.org)")
