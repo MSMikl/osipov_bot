@@ -7,7 +7,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 
-from devman.models import Student, Manager
+from devman.models import Student
 
 
 def main():

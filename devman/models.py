@@ -88,6 +88,10 @@ class Student(models.Model):
     )
     is_active = models.BooleanField('Доступен для проекта', default=True)
 
+    @property
+    def active_team(self):
+        return self.teams.filter(is_active=True).last()
+
     def __str__(self):
         return self.name
 

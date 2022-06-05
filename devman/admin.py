@@ -4,7 +4,7 @@ from devman.models import Student, Manager, Team
 
 @admin.register(Student)
 class Student(admin.ModelAdmin):
-    list_display = ['__str__', 'level', 'status']
+    list_display = ['__str__', 'level', 'status', 'active_team']
     raw_id_fields = [
         'banned_students',
         'desired_students',
