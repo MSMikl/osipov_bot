@@ -13,6 +13,7 @@ from devman.models import Student, Manager, Team, Start
 
 def get_student_full_data(student):
     result = {'id': student.id}
+    result['chat_id'] = student.chat_id
     result['name'] = student.name
     result['level'] = student.level
     result['status'] = student.status
@@ -134,6 +135,7 @@ def check_for_new_date():
             active_teams_count=models.Count('teams', filter=models.Q(teams__is_active=True))
         )
     )
+    students.update(status=2)
     result = list(students.filter(active_teams_count=0).values_list('chat_id', flat=True))
     return (active_date.primary_date, active_date.secondary_date, result)
 
