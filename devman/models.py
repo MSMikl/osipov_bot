@@ -1,7 +1,26 @@
 from django.db import models
 
 
+class Project(models.Model):
+    name = models.CharField('Название проекта', max_length=100)
+    startdate = models.DateField('Дата начала проекта')
+    is_active = models.BooleanField('Активный проект', default=True)
+    def __str__(self):
+        return f'{self.name} - {self.startdate}'
+
+
 class Manager(models.Model):
+    COLOR_CHOICES = [
+        ('blue', 'Синий'),
+        ('orange', 'Апельсиновый'),
+        ('green', 'Зеленый'),
+        ('red', 'Красный'),
+        ('purple', 'Фиолетовый'),
+        ('pink', 'Розовый'),
+        ('lime', 'Лайм'),
+        ('sky', 'Небесный'),
+        ('grey', 'Серый')
+    ]
     id = models.CharField(
         'Telegram id',
         max_length=50,
@@ -12,6 +31,12 @@ class Manager(models.Model):
     starttime = models.TimeField('Начало рабочего интервала')
     finishtime = models.TimeField('Окончание рабочего интервала')
     is_active = models.BooleanField('Работает', default=True)
+    trello_bg_color = models.CharField(
+        'Цвет доски Trello',
+        max_length=12,
+        choices = COLOR_CHOICES,
+        default = 'grey'
+    )
 
     def __str__(self):
         return self.name
@@ -97,8 +122,13 @@ class Student(models.Model):
 
 
 class Team(models.Model):
-    date = models.DateField('Дата начала проекта')
-    title = models.CharField('Название проекта', max_length=100, blank=True)
+
+    project = models.ForeignKey(
+        Project,
+        related_name='teams',
+        verbose_name='Проект',
+        on_delete=models.CASCADE,
+    )
     call_time = models.TimeField('Время созвона', blank=True, null=True)
     students = models.ManyToManyField(
         Student,
@@ -123,7 +153,7 @@ class Team(models.Model):
     description = models.URLField('Описание проекта', blank=True)
 
     def __str__(self):
-        return f'Команда {self.id} {self.date}'
+        return f'Команда {self.id} {self.project.startdate}'
 
     class Meta:
         verbose_name = 'Команда'

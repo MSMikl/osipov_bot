@@ -1,14 +1,17 @@
+import json
 import os
-
-from datetime import datetime
+from datetime import datetime, timedelta
+from os.path import join, dirname
 
 import django
+import requests
+from dotenv import load_dotenv
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 
-from devman.models import Student, Manager, Team
+from devman.models import Student, Manager, Team, Project
 
 
 def get_student_info(student_id):
@@ -121,5 +124,108 @@ def finalize_teams(start_date):
     teams.students.update(status=1)
 
 
+def create_trello(project_id):
+
+    project = Project.objects.get(id=project_id)
+    project_end_date = project.startdate + timedelta(days=7)
+    dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+    API_KEY = os.environ.get("API_KEY")
+    TOKEN = os.environ.get("TOKEN")
+
+    project_full_name = f'Проект {project.name}, [{project.startdate}-{project_end_date}]'
+
+    url = "https://api.trello.com/1/organizations"
+
+    headers = {
+        "Accept": "application/json"
+    }
+
+    query = {
+        'displayName': project_full_name,
+        'key': API_KEY,
+        'token': TOKEN
+    }
+
+    response = requests.request(
+        "POST",
+        url,
+        headers=headers,
+        params=query
+    )
+
+    org = json.loads(response.text)
+    #print(org)
+
+    teams = Team.objects.all()
+
+    for team in teams:
+
+        students = ''
+        for student in team.students.all():
+            students += f'{student.name} '
+
+        board_name=f'{team.call_time} - {students}'
+
+        url = "https://api.trello.com/1/boards/"
+
+        query = {
+            'name': board_name,
+            'key': API_KEY,
+            'token': TOKEN,
+            'idOrganization':org['id'],
+            'prefs_background':team.manager.trello_bg_color,
+            'desc':f'PM команды: {team.manager.name}',
+            'prefs_permissionLevel':'private',
+
+        }
+
+        response = requests.request(
+            "POST",
+            url,
+            params=query
+        )
+
+        board = json.loads(response.text)
+        #print(board['url'])
+
+        url = f"https://api.trello.com/1/boards/{board['id']}"
+        team.trello = url
+        team.save()
+
+        query = {
+            'key': API_KEY,
+            'token': TOKEN,
+            'closed':'false'
+        }
+
+        response = requests.request(
+            "PUT",
+            url,
+            params=query
+        )
+
+        url = f"https://api.trello.com/1/boards/{board['id']}/lists"
+
+        headers = {
+            "Accept": "application/json"
+        }
+
+        query = {
+            'name': 'Архив',
+            'pos': 'bottom',
+            'key': API_KEY,
+            'token': TOKEN
+        }
+
+        response = requests.request(
+            "POST",
+            url,
+            headers=headers,
+            params=query
+        )
+
+
 if __name__ == '__main__':
-    print(get_manager_info('@Michalbl4')['teams'][0]['trello'])
+
+    print(get_manager_info('@belgorod_admin')['teams'][0]['trello'])

@@ -9,7 +9,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 
-from devman.models import Manager, Team, Student
+from devman.models import Manager, Team, Student, Project
+from functions import create_trello
 
 
 DATE = date(year=2022, month=6, day=3)
@@ -58,6 +59,9 @@ def main():
                     break
             print(team.students.all(), team.manager, team.call_time)
             print(slots)
+
+    for project in Project.objects.filter(is_active=True):
+        create_trello(project.id)
 
 
 if __name__ == '__main__':
