@@ -134,9 +134,10 @@ def check_for_new_date():
         .annotate(
             active_teams_count=models.Count('teams', filter=models.Q(teams__is_active=True))
         )
+        .filter(active_teams_count=0)
     )
     students.update(status=2)
-    result = list(students.filter(active_teams_count=0).values_list('chat_id', flat=True))
+    result = list(students.values_list('chat_id', flat=True))
     return (active_date.primary_date, active_date.secondary_date, result)
 
 
@@ -153,7 +154,9 @@ def check_for_new_teams():
         .annotate(
             active_teams_count=models.Count('teams', filter=models.Q(teams__is_active=True))
         )
+        .filter(active_teams_count__gt=0)
     )
+    students.update(status=4)
     result = [get_student_full_data(student) for student in students]
     return result
 
