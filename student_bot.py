@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import date, timedelta, time
+from datetime import date, time
 
 from dotenv import load_dotenv
 from telegram import (KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove,
@@ -11,7 +11,8 @@ from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           DispatcherHandlerStop, Filters, MessageHandler,
                           Updater)
 
-from functions import get_student_info, set_student
+from functions import (check_for_new_date, check_for_new_teams,
+                       get_student_info, set_student)
 
 # Enable logging
 logging.basicConfig(
@@ -63,7 +64,7 @@ def get_active_project_status(context) -> int:
     return context.user_data.get("project_status", NO_ACTIVE_PROJECT)
 
 
-def get_group_description(data: dict) -> str:
+def get_team_description(data: dict) -> str:
     desc = [
         f"Созвон вашей группы в {data['call_time']:%H:%M}",
         f"Проект менеджер: {data['PM']}",
@@ -76,11 +77,10 @@ def get_group_description(data: dict) -> str:
     return "\n".join(desc)
 
 
-def get_weeks(project_date: date) -> dict:
-    second_date = project_date + timedelta(days=7)
+def get_weeks(primary_date: date, secondary_date: date) -> dict:
     return {
-        f"с {project_date:%d.%m}": project_date,
-        f"с {second_date:%d.%m}": second_date,
+        f"с {primary_date:%d.%m}": primary_date,
+        f"с {secondary_date:%d.%m}": secondary_date,
     }
 
 
@@ -105,19 +105,13 @@ def get_adjust_time_ranges(range_id):
 
 
 def check_user(update: Update, context: CallbackContext) -> None:
-    base_response = get_student_info(update.effective_user.name, update.effective_chat.id)
+    base_response = get_student_info(
+        update.effective_user.name, update.effective_chat.id)
     if not base_response:
         update.message.reply_markdown(
             "Этот чат только для студентов курсов [Devman](https://dvmn.org)")
         raise DispatcherHandlerStop()
     context.user_data.update(base_response)
-
-    context.job_queue.run_once(
-        job_calback,
-        interval=30,
-        first=10,
-        context=update.message.chat_id
-    )
 
 
 def check_project_status(update: Update, context: CallbackContext) -> None:
@@ -130,14 +124,15 @@ def check_project_status(update: Update, context: CallbackContext) -> None:
             "Подожди пока формируем группы, как будет готово - напишу")
         raise DispatcherHandlerStop()
     if context.user_data['status'] == ACTIVE_PROJECT:
-        group_description = get_group_description(context.user_data)
+        group_description = get_team_description(context.user_data)
         update.message.reply_text(group_description)
         raise DispatcherHandlerStop()
 
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(
-        f"Привет {context.user_data['name']}.")
+        f"Привет {context.user_data['name']}.",
+        reply_markup=ReplyKeyboardRemove())
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -154,7 +149,10 @@ def unknow_command(update: Update, context: CallbackContext) -> None:
 
 def start_conversation(update: Update, context: CallbackContext) -> int:
     context.chat_data.clear()
-    context.chat_data["weeks"] = get_weeks(context.user_data["project_date"])
+    context.chat_data["weeks"] = get_weeks(
+        context.user_data.get("primary_date"),
+        context.user_data.get("secondary_date")
+    )
     keyboard = [[KeyboardButton(week)]
                 for week in context.chat_data["weeks"].keys()]
     keyboard.append([KeyboardButton("не смогу принять участие")])
@@ -263,8 +261,28 @@ def finish_registration(update: Update, context: CallbackContext):
 
 
 def job_calback(context: CallbackContext):
-    context.bot.send_message(
-        chat_id=context.job.context, text='A single message with 30s delay')
+    new_project = check_for_new_date()
+    if new_project:
+        keyboard = [
+            [KeyboardButton("/start")],
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        for chat_id in new_project:
+            context.bot.send_message(
+                chat_id=chat_id,
+                text='Есть новая информация. Начнем?',
+                reply_markup=reply_markup,
+            )
+        return
+    new_teams = check_for_new_teams()
+    if new_teams:
+        for team_info in new_teams:
+            team_desc = get_team_description(team_info)
+            context.bot.send_message(
+                chat_id=team_info["chat_id"],
+                text=f'Welcome aboard! Ты в команде ;)\n{team_desc}',
+                reply_markup=ReplyKeyboardRemove(),
+            )
 
 
 def main() -> None:
@@ -273,6 +291,8 @@ def main() -> None:
 
     updater = Updater(tg_token)
     dispatcher = updater.dispatcher
+    job_queue = updater.job_queue
+    job_queue.run_repeating(job_calback, 60, 5)
 
     dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
     dispatcher.add_handler(CommandHandler("start", start), 1)
