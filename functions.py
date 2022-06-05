@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import django
@@ -52,8 +53,12 @@ def get_student_info(student_id, chat_id=None):
         return
     student.chat_id = chat_id
     student.save()
-    return get_student_full_data(student)
-    
+    start = Start.objects.filter(is_active=True).last()
+    result = get_student_full_data(student)
+    if start:
+        result['primary_date'] = start.primary_date
+        result['secondary_date'] = start.secondary_date 
+    return result
 
 
 def set_student(data):
@@ -118,7 +123,13 @@ def get_team_info(id):
 def finalize_teams(start_date):
     teams = Team.objects.filter(is_active=True, date=start_date).prefetch_related('students')
     teams.update(is_active=False)
-    teams.students.update(status=1)
+    teams.students.update(
+        status=1,
+        project_date=None,
+        available_time_start=None,
+        available_time_finish=None
+    )
+    Start.objects.filter(secondary_date=start_date).update(is_active=False)
 
 
 def check_for_new_date():
@@ -126,6 +137,7 @@ def check_for_new_date():
     if not active_date:
         return
     active_date.send_request = False
+    active_date.is_active = True
     active_date.save()
     students = (
         Student.objects

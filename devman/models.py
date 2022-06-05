@@ -140,6 +140,7 @@ class Team(models.Model):
 
 
 class Start(models.Model):
+    is_active = models.BooleanField('Доступна для записи', default=False)
     primary_date = models.DateField('Основная неделя проекта')
     secondary_date = models.DateField('Запасная неделя проекта')
     send_request = models.BooleanField('Отправить запрос', default=False)
