@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 
 from django.db import models
 
@@ -11,8 +11,14 @@ class Manager(models.Model):
         primary_key=True
     )
     name = models.CharField('Имя', max_length=70, blank=True)
-    starttime = models.TimeField('Начало рабочего интервала')
-    finishtime = models.TimeField('Окончание рабочего интервала')
+    starttime = models.TimeField(
+        'Начало рабочего интервала',
+        default=time(0, 0)
+    )
+    finishtime = models.TimeField(
+        'Окончание рабочего интервала',
+        default=time(0, 0)
+    )
     is_active = models.BooleanField('Работает', default=True)
 
     def __str__(self):
