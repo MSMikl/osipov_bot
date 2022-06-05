@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
 
 from dotenv import load_dotenv
 from telegram import (KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove,
@@ -11,7 +11,7 @@ from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           DispatcherHandlerStop, Filters, MessageHandler,
                           Updater)
 
-from functions import (check_for_new_date, check_for_new_teams,
+from functions import (check_for_new_date, check_for_new_teams, finalize_teams,
                        get_student_info, set_student)
 
 # Enable logging
@@ -261,6 +261,9 @@ def finish_registration(update: Update, context: CallbackContext):
 
 
 def job_calback(context: CallbackContext):
+    date_for_final = datetime.now() - timedelta(days=8)
+    finalize_teams(date_for_final)
+    
     new_project = check_for_new_date()
     if new_project:
         keyboard = [

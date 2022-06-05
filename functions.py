@@ -122,13 +122,14 @@ def get_team_info(id):
 
 def finalize_teams(start_date):
     teams = Team.objects.filter(is_active=True, date=start_date).prefetch_related('students')
-    teams.update(is_active=False)
-    teams.students.update(
-        status=1,
-        project_date=None,
-        available_time_start=None,
-        available_time_finish=None
-    )
+    if teams:
+        teams.update(is_active=False)
+        teams.students.update(
+            status=1,
+            project_date=None,
+            available_time_start=None,
+            available_time_finish=None
+        )
     Start.objects.filter(secondary_date=start_date).update(is_active=False)
 
 
