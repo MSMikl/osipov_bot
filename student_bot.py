@@ -11,7 +11,7 @@ from telegram.ext import (CallbackContext, CommandHandler, ConversationHandler,
                           DispatcherHandlerStop, Filters, MessageHandler,
                           Updater)
 
-from functions import get_student_info, set_student
+from functions import check_for_new_date, get_student_info, set_student
 
 # Enable logging
 logging.basicConfig(
@@ -105,19 +105,13 @@ def get_adjust_time_ranges(range_id):
 
 
 def check_user(update: Update, context: CallbackContext) -> None:
-    base_response = get_student_info(update.effective_user.name, update.effective_chat.id)
+    base_response = get_student_info(
+        update.effective_user.name, update.effective_chat.id)
     if not base_response:
         update.message.reply_markdown(
             "Этот чат только для студентов курсов [Devman](https://dvmn.org)")
         raise DispatcherHandlerStop()
     context.user_data.update(base_response)
-
-    context.job_queue.run_once(
-        job_calback,
-        interval=30,
-        first=10,
-        context=update.message.chat_id
-    )
 
 
 def check_project_status(update: Update, context: CallbackContext) -> None:
@@ -137,7 +131,8 @@ def check_project_status(update: Update, context: CallbackContext) -> None:
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(
-        f"Привет {context.user_data['name']}.")
+        f"Привет {context.user_data['name']}.",
+        reply_markup=ReplyKeyboardRemove())
 
 
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -263,8 +258,18 @@ def finish_registration(update: Update, context: CallbackContext):
 
 
 def job_calback(context: CallbackContext):
-    context.bot.send_message(
-        chat_id=context.job.context, text='A single message with 30s delay')
+    new_project = check_for_new_date()
+    if new_project:
+        keyboard = [
+            [KeyboardButton("/start")],
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        for chat_id in new_project:
+            context.bot.send_message(
+                chat_id=chat_id,
+                text='Есть новая информация. Начнем?',
+                reply_markup=reply_markup,
+            )
 
 
 def main() -> None:
@@ -273,6 +278,8 @@ def main() -> None:
 
     updater = Updater(tg_token)
     dispatcher = updater.dispatcher
+    job_queue = updater.job_queue
+    job = job_queue.run_repeating(job_calback, 60, 5)
 
     dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
     dispatcher.add_handler(CommandHandler("start", start), 1)
