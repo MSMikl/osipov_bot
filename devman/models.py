@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models
 
 
@@ -39,6 +41,9 @@ class Student(models.Model):
         max_length=50,
         unique=True,
         primary_key=True
+    )
+    chat_id = models.IntegerField(
+        'Идентификатор чата с ботом в ТГ', null=True, blank=True
     )
     name = models.CharField('Имя', max_length=70, blank=True)
     level = models.CharField(
@@ -132,3 +137,13 @@ class Team(models.Model):
     class Meta:
         verbose_name = 'Команда'
         verbose_name_plural = 'Команды'
+
+
+class Start(models.Model):
+    primary_date = models.DateField('Основная неделя проекта')
+    secondary_date = models.DateField('Запасная неделя проекта')
+    send_request = models.BooleanField('Отправить запрос', default=False)
+    send_teams = models.BooleanField('Разослать сформированные команды', default=False)
+
+    def __str__(self) -> str:
+        return f"Даты {datetime.strftime(self.primary_date, '%d.%m')}, {datetime.strftime(self.secondary_date, '%d.%m')}"

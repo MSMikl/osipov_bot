@@ -8,10 +8,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 
-from devman.models import Student, Manager, Team
+from devman.models import Student, Manager, Team, Start
 
 
-def get_student_info(student_id):
+def get_student_info(student_id, chat_id):
     result = {'id': student_id}
     student = (
         Student.objects
@@ -21,6 +21,8 @@ def get_student_info(student_id):
     )
     if not student:
         return
+    student.chat_id = chat_id
+    student.save()
     result['name'] = student.name
     result['level'] = student.level
     result['status'] = student.status
@@ -107,20 +109,28 @@ def get_team_info(id):
     return result
 
 
-def close_team(team_id, manager_id, final_status=''):
-    team = Team.objects.select_related('manager').get(id=team_id)
-    if manager_id != team.manager.id:
-        return None
-    team.is_active = False
-    team.final_status = final_status
-    team.save()
-    return team.id
-
-
 def finalize_teams(start_date):
     teams = Team.objects.filter(is_active=True, date=start_date).prefetch_related('students')
     teams.update(is_active=False)
     teams.students.update(status=1)
+
+
+def check_for_new_date():
+    active_date = Start.objects.filter(send_request=True).last()
+    if not active_date:
+        return True
+    active_date.send_request = False
+    students = Student.objects.filter(is_active = True, active_team__isnull=True)
+    result = 
+    return (active_date.primary_date, active_date.secondary_date)
+
+
+def check_for_new_teams():
+    active_date = Start.objects.filter(send_request=True).last()
+    if not active_date:
+        return True
+    active_date.send_request = False
+    return (active_date.primary_date, active_date.secondary_date)
 
 
 if __name__ == '__main__':
