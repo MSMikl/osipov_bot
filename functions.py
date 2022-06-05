@@ -149,8 +149,7 @@ def check_for_new_date():
         .filter(active_teams_count=0)
     )
     students.update(status=2)
-    result = list(students.values_list('chat_id', flat=True))
-    return (active_date.primary_date, active_date.secondary_date, result)
+    return list(students.values_list('chat_id', flat=True))
 
 
 def check_for_new_teams():
