@@ -288,11 +288,12 @@ def job_calback(context: CallbackContext):
 def main() -> None:
     load_dotenv()
     tg_token = os.getenv("TG_TOKEN")
+    job_time_interval = os.getenv("JOB_DELAY", 60 * 60 * 12) # default - 12 hours
 
     updater = Updater(tg_token)
     dispatcher = updater.dispatcher
     job_queue = updater.job_queue
-    job_queue.run_repeating(job_calback, 60, 5)
+    job_queue.run_repeating(job_calback, job_time_interval, 5)
 
     dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
     dispatcher.add_handler(CommandHandler("start", start), 1)
