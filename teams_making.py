@@ -84,7 +84,7 @@ def main():
                 'database': manager
             })
         for level in levels:
-            make_teams(start_date, 'novice', managers)
+            make_teams(start_date, level, managers)
 
 
 if __name__ == '__main__':
