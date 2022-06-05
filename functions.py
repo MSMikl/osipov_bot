@@ -40,7 +40,7 @@ def get_student_full_data(student):
     return result
 
 
-def get_student_info(student_id, chat_id):
+def get_student_info(student_id, chat_id=None):
     student = (
         Student.objects
         .filter(id=student_id, is_active=True)
