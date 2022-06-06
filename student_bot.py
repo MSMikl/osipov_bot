@@ -260,8 +260,14 @@ def finish_registration(update: Update, context: CallbackContext):
     set_student(data)
 
 
+def close_project(update: Update, context: CallbackContext):
+    finalize_teams(context.user_data["primary_date"])
+    finalize_teams(context.user_data["secondary_date"])
+    raise DispatcherHandlerStop()
+
+
 def job_calback(context: CallbackContext):
-    date_for_final = datetime.now() - timedelta(days=8)
+    date_for_final = datetime.now().date() - timedelta(days=8)
     finalize_teams(date_for_final)
     
     new_project = check_for_new_date()
@@ -304,6 +310,7 @@ def main() -> None:
     ]
     if debug_mode:
         bot_commands.append(("changestatus", "Изменить статус (для отладки)"))
+        bot_commands.append(("finalizeteams", "Закрыть проект (для отладки)"))
     updater.bot.set_my_commands(bot_commands)
     
     dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
@@ -328,6 +335,8 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("help", help_command), 3)
     if debug_mode:
         dispatcher.add_handler(CommandHandler("changestatus", change_status), 1)
+        dispatcher.add_handler(CommandHandler("finalizeteams", close_project), 1)
+        
     dispatcher.add_handler(registration_handler, 3)
 
     dispatcher.add_handler(MessageHandler(
