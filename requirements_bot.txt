@@ -1,0 +1,5 @@
+Django==4.0.4
+python-dotenv==0.20.0
+python-telegram-bot==13.12
+mysqlclient==2.1.0
+
