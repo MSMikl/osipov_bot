@@ -1,7 +1,7 @@
-import argparse
 import os
 
 import django
+import requests
 
 from django.db import models
 
@@ -122,9 +122,9 @@ def get_team_info(id):
 
 def finalize_teams(start_date):
     teams = Team.objects.filter(is_active=True, date=start_date).prefetch_related('students')
-    if teams:
-        teams.update(is_active=False)
-        teams.students.update(
+    teams.update(is_active=False)
+    for team in teams:
+        team.students.update(
             status=1,
             project_date=None,
             available_time_start=None,
@@ -159,6 +159,7 @@ def check_for_new_teams():
         return
     active_date.send_teams = False
     active_date.save()
+    create_trello(active_date.id)
     students = (
         Student.objects
         .filter(is_active=True)
@@ -173,6 +174,106 @@ def check_for_new_teams():
     return result
 
 
+def create_trello(project_id):
+
+    project = Start.objects.get(id=project_id)
+    project_end_date = project.primary_date + timedelta(days=7)
+    API_KEY = os.environ.get("TRELLO_API_KEY")
+    TOKEN = os.environ.get("TRELLO_TOKEN")
+
+    project_full_name = f'Проект [{project.primary_date}-{project_end_date}]'
+
+    url = "https://api.trello.com/1/organizations"
+
+    headers = {
+        "Accept": "application/json"
+    }
+
+    query = {
+        'displayName': project_full_name,
+        'key': API_KEY,
+        'token': TOKEN
+    }
+
+    response = requests.request(
+        "POST",
+        url,
+        headers=headers,
+        params=query
+    )
+
+    org = json.loads(response.text)
+    #print(org)
+
+    teams = Team.objects.filter(is_active=True).prefetch_related('students')
+
+    for team in teams:
+
+        students = ''
+        for student in team.students.all():
+            students += f'{student.name} '
+
+        board_name=f'{team.call_time} - {students}'
+
+        url = "https://api.trello.com/1/boards/"
+
+        query = {
+            'name': board_name,
+            'key': API_KEY,
+            'token': TOKEN,
+            'idOrganization':org['id'],
+            'prefs_background':team.manager.trello_bg_color,
+            'desc':f'PM команды: {team.manager.name}',
+            'prefs_permissionLevel':'private',
+
+        }
+
+        response = requests.request(
+            "POST",
+            url,
+            params=query
+        )
+
+        board = json.loads(response.text)
+        #print(board['url'])
+
+        url = f"https://api.trello.com/1/boards/{board['id']}"
+        team.trello = url
+        team.save()
+
+        query = {
+            'key': API_KEY,
+            'token': TOKEN,
+            'closed':'false'
+        }
+
+        response = requests.request(
+            "PUT",
+            url,
+            params=query
+        )
+
+        url = f"https://api.trello.com/1/boards/{board['id']}/lists"
+
+        headers = {
+            "Accept": "application/json"
+        }
+
+        query = {
+            'name': 'Архив',
+            'pos': 'bottom',
+            'key': API_KEY,
+            'token': TOKEN
+        }
+
+        response = requests.request(
+            "POST",
+            url,
+            headers=headers,
+            params=query
+        )
+
+
+
 if __name__ == '__main__':
-    print(check_for_new_date())
     print(check_for_new_teams())
