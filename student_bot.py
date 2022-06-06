@@ -291,13 +291,21 @@ def job_calback(context: CallbackContext):
 def main() -> None:
     load_dotenv()
     tg_token = os.getenv("TG_TOKEN")
-    job_time_interval = os.getenv("JOB_DELAY", 60 * 60 * 12) # default - 12 hours
+    job_time_interval = int(os.getenv("JOB_DELAY", 60 * 60 * 12)) # default - 12 hours
+    debug_mode = os.getenv("BOT_DEBUG", False)
 
     updater = Updater(tg_token)
     dispatcher = updater.dispatcher
     job_queue = updater.job_queue
     job_queue.run_repeating(job_calback, job_time_interval, 5)
 
+    bot_commands = [
+        ("start", "Начать диалог"),
+    ]
+    if debug_mode:
+        bot_commands.append(("changestatus", "Изменить статус (для отладки)"))
+    updater.bot.set_my_commands(bot_commands)
+    
     dispatcher.add_handler(MessageHandler(Filters.all, check_user), 0)
     dispatcher.add_handler(CommandHandler("start", start), 1)
     dispatcher.add_handler(MessageHandler(
@@ -318,7 +326,8 @@ def main() -> None:
         fallbacks=[start_conversation_handler])
 
     dispatcher.add_handler(CommandHandler("help", help_command), 3)
-    dispatcher.add_handler(CommandHandler("changestatus", change_status), 1)
+    if debug_mode:
+        dispatcher.add_handler(CommandHandler("changestatus", change_status), 1)
     dispatcher.add_handler(registration_handler, 3)
 
     dispatcher.add_handler(MessageHandler(
